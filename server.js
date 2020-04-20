@@ -2,10 +2,12 @@ const path = require('path');
 const http = require('http');
 const express = require('express');
 const socket = require('socket.io');
+const formatMessage = require('./utils/messages')
 
 const app = express();
 const server = http.createServer(app);
 const io = socket(server);
+const botName ='Chat BOT'
 
 // Set Static folder 
 app.use(express.static(path.join(__dirname,'public')));
@@ -14,20 +16,20 @@ app.use(express.static(path.join(__dirname,'public')));
 io.on('connection', socket =>{
 
     // Welcome to the user who has just connected
-    socket.emit('message','Welcome to Chat !!');
+    socket.emit('message',formatMessage(botName,'Welcome aboard ^-^ '));
 
     // BroadCast when a user connects
-    socket.broadcast.emit('message','A user has joined the chat.');
+    socket.broadcast.emit('message',formatMessage(botName,'A user has joined the chat.'));
 
     // If a client disconnect
     socket.on('disconnect', ()=>{
-        io.emit('message','A user has left the chat.')
+        io.emit('message',formatMessage(botName,'A user has left the chat.'));
     });
 
     // Intercept the ChatMessage
     socket.on('ChatMessage',(msg)=>{
         //BroadCast the msg to everyone
-        io.emit('message', msg ); 
+        io.emit('message', formatMessage('User',msg)); 
     });
 });
 
