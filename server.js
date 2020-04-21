@@ -2,7 +2,8 @@ const path = require('path');
 const http = require('http');
 const express = require('express');
 const socket = require('socket.io');
-const formatMessage = require('./utils/messages')
+const formatMessage = require('./utils/messages');
+const { userJoin,getCurrentUser } = require('./utils/users');
 
 const app = express();
 const server = http.createServer(app);
@@ -15,21 +16,30 @@ app.use(express.static(path.join(__dirname,'public')));
 // When a client connects
 io.on('connection', socket =>{
 
-    // Welcome to the user who has just connected
-    socket.emit('message',formatMessage(botName,'Welcome aboard ^-^ '));
+    // When the user join a Room Chat
+    socket.on('joinRoom',({username,room}) => {
+        const user = userJoin(socket.id,username,room);
 
-    // BroadCast when a user connects
-    socket.broadcast.emit('message',formatMessage(botName,'A user has joined the chat.'));
+        socket.join(user.room);
+
+        // Welcome to the user who has just connected
+        socket.emit('message',formatMessage(botName,'Welcome aboard ^-^ '));
+
+        // BroadCast when a user connects
+        socket.broadcast
+            .to(user.room)
+            .emit('message',formatMessage(botName,`${user.username} has joined the chat.`));
+    });
+
+    // Intercept the ChatMessage
+    socket.on('chatMessage', msg => {
+        const user = getCurrentUser(socket.id);
+        io.to(user.room).emit('message', formatMessage(user.username, msg));
+    });
 
     // If a client disconnect
     socket.on('disconnect', ()=>{
         io.emit('message',formatMessage(botName,'A user has left the chat.'));
-    });
-
-    // Intercept the ChatMessage
-    socket.on('ChatMessage',(msg)=>{
-        //BroadCast the msg to everyone
-        io.emit('message', formatMessage('User',msg)); 
     });
 });
 
