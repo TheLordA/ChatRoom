@@ -3,10 +3,10 @@ const http = require('http');
 const express = require('express');
 const socket = require('socket.io');
 const formatMessage = require('./utils/messages');
-const { userJoin,getCurrentUser } = require('./utils/users');
+const { userJoin,getCurrentUser,getRoomUsers,userLeave } = require('./utils/users');
 
 const app = express();
-const server = http.createServer(app);
+const server = http.createServer(app); 
 const io = socket(server);
 const botName ='Chat BOT'
 
@@ -29,6 +29,12 @@ io.on('connection', socket =>{
         socket.broadcast
             .to(user.room)
             .emit('message',formatMessage(botName,`${user.username} has joined the chat.`));
+
+        // Sending users & room info
+        io.to(user.room).emit('roomUsers',{
+            room : user.room,
+            users : getRoomUsers(user.room)
+        });
     });
 
     // Intercept the ChatMessage
@@ -39,7 +45,16 @@ io.on('connection', socket =>{
 
     // If a client disconnect
     socket.on('disconnect', ()=>{
-        io.emit('message',formatMessage(botName,'A user has left the chat.'));
+        const user = userLeave(socket.id); 
+        if(user){
+            io.to(user.room).emit('message',formatMessage(botName,`${user.username} has left the chat.`));
+
+            // Sending users & room info
+            io.to(user.room).emit('roomUsers',{
+                room : user.room,
+                users : getRoomUsers(user.room)
+            });
+        }
     });
 });
 
